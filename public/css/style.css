@@ -1,0 +1,221 @@
+/* /public/css/style.css */
+
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    flex-direction: column;
+}
+
+h1 {
+    color: #333;
+    text-align: center;
+}
+
+form {
+    margin: 20px;
+    padding: 10px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+form button {
+    padding: 10px 20px;
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+form button:hover {
+    background-color: #0056b3;
+}
+
+form input[type="number"] {
+    padding: 8px;
+    margin: 10px;
+    width: 60px;
+    font-size: 16px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+}
+
+p {
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.card-list {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: 0;
+}
+
+.card-list li {
+    margin: 10px;
+    text-align: center;
+}
+
+.card-list img {
+    width: 80px;
+    height: 120px;
+    object-fit: cover;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+}
+
+.card-info {
+    font-size: 16px;
+    margin-top: 5px;
+    font-weight: bold;
+}
+
+.message, .error {
+    padding: 10px;
+    margin-top: 20px;
+    font-weight: bold;
+    text-align: center;
+    border-radius: 5px;
+}
+
+.message {
+    background-color: #28a745;
+    color: #fff;
+}
+
+.error {
+    background-color: #dc3545;
+    color: #fff;
+}
+/* Estilo da Mesa */
+body.game-table {
+    background-color: #065C3A; /* Verde escuro */
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-family: Arial, sans-serif;
+}
+
+h1 {
+    margin-top: 20px;
+    color: #fff;
+}
+
+.table {
+    position: relative;
+    width: 80%;
+    height: 500px;
+    margin: 20px auto;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #065C3A;
+}
+
+.player {
+    position: absolute;
+    text-align: center;
+}
+
+/* Posicionamento dos jogadores */
+.player-top {
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.player-left {
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.player-right {
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.player-bottom {
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+/* Avatares dos jogadores */
+.avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    margin-bottom: 10px;
+}
+
+/* Estilo das cartas */
+.deck, .hand {
+    display: flex;
+    gap: 5px;
+}
+
+.card-back, .card-front {
+    width: 40px;
+    height: 60px;
+    border-radius: 5px;
+}
+
+.card-back {
+    background-image: url('https://deckofcardsapi.com/static/img/back.png'); /* Imagem do verso da carta */
+    background-size: cover;
+}
+
+.card-front {
+    border: 1px solid #fff;
+    border-radius: 5px;
+}
+
+
+/* Botão */
+.button {
+    display: inline-block;
+    padding: 10px 20px;
+    margin-top: 20px;
+    background-color: #FF5722;
+    color: #fff;
+    text-decoration: none;
+    border-radius: 5px;
+    font-weight: bold;
+    transition: background-color 0.3s;
+}
+
+.button:hover {
+    background-color: #e64a19;
+}
+.trufo-display {
+    margin-top: 10px;
+    font-size: 18px;
+    color: #fff;
+}
+/* Define o estilo básico para as cartas dos jogadores */
+.player-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    cursor: pointer;
+}
+
+/* Efeito de hover para destacar a carta ao passar o mouse */
+.player-card:hover {
+    transform: translateY(-10px); /* Sobe a carta 10px */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); /* Adiciona uma sombra */
+    z-index: 10; /* Coloca a carta em destaque acima das outras */
+}
