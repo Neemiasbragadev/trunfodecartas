@@ -31,6 +31,10 @@
             </div>
         </div>
 
+        <div class="play player-center"  id="player-center">
+        
+        </div>
+
         <!-- Jogador 3 (canto direito) -->
         <div class="player player-right">
             <img class="avatar" src="{{ asset('images/avatar3.png') }}" alt="Avatar Jogador 3">
@@ -46,7 +50,7 @@
             <img class="avatar" src="{{ asset('images/avatar4.png') }}" alt="Avatar Jogador Principal">
             <div class="hand">
                 @foreach ($players[3] as $card)
-                    <img class="card-front player-card" src="{{ $card['image'] }}" alt="{{ $card['value'] }} de {{ $card['suit'] }}">
+                    <img class="card-front player-card"  onclick="selecionarCarta()" src="{{ $card['image'] }}" alt="{{ $card['value'] }} de {{ $card['suit'] }}">
                 @endforeach
             </div>
         </div>
@@ -58,4 +62,23 @@
     </form>
 
 </body>
+<script>
+    function selecionarCarta(event) {
+        // Obtém a carta que foi clicada
+        const cartaSelecionada = event.target;
+
+        // Remove a carta da mão do jogador
+        cartaSelecionada.parentElement.removeChild(cartaSelecionada);
+
+        // Adiciona a carta na área central
+        const playerCenter = document.getElementById('player-center');
+        playerCenter.appendChild(cartaSelecionada);
+    }
+
+    // Adiciona o evento de clique em cada carta da mão do jogador
+    document.querySelectorAll('.player-card').forEach(card => {
+        card.addEventListener('click', selecionarCarta);
+    });
+</script>
+
 </html>
