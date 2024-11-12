@@ -1,21 +1,16 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jogo de Truco</title>
-    <link rel="stylesheet" href="{{ asset('css/style.css') }}">
-</head>
-<body class="game-table">
+<!-- resources/views/cardgame/index.blade.php -->
+@extends('layouts.app')
 
-<h1>Cartas dos Jogadores</h1>
+@section('title', 'Jogo de Truco')
+
+@section('content')
+    <h1>Cartas dos Jogadores</h1>
 
     @if (session('trufo'))
         <div class="trufo-display">
             <span>Trufo Selecionado: {{ session('trufo') }}</span>
         </div>
     @endif
-
 
     @if (session('message'))
         <div class="message">{{ session('message') }}</div>
@@ -48,6 +43,4 @@
         @csrf
         <button type="submit">Distribuir Cartas</button>
     </form>
-
-</body>
-</html>
+@endsection
