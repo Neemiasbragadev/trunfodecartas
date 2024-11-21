@@ -1,81 +1,74 @@
-<!-- resources/views/cardgame/players.blade.php -->
 @extends('layouts.app')
 
-@section('title', 'Cartas dos Jogadores')
+@section('title', 'Mesa de Jogo')
 
 @section('content')
-    <h1>Cartas dos Jogadores</h1>
+    <h1>Mesa de Jogo - Sala {{ $room->room_id }}</h1>
+
+    <p>
+        <strong>Trunfo:</strong>
+        @if ($room->trump)
+            {{data_get($room, 'trump.value')}} de {{data_get($room, 'trump.suit')}}
+        @else
+            <em>Trunfo não definido.</em>
+        @endif
+    </p>
 
     <div class="table">
-        <!-- Jogador 1 (canto superior) -->
-        <div class="player player-top">
-            <img class="avatar" src="{{ asset('images/avatar1.png') }}" alt="Avatar Jogador 1">
-            <div class="deck">
-                @foreach ($players[0] as $card)
-                    <img class="card-back">
-                @endforeach
-            </div>
-        </div>
-
-        <!-- Jogador 2 (canto esquerdo) -->
-        <div class="player player-left">
-            <img class="avatar" src="{{ asset('images/avatar2.png') }}" alt="Avatar Jogador 2">
-            <div class="deck">
-                @foreach ($players[1] as $card)
-                    <img class="card-back">
-                @endforeach
-            </div>
-        </div>
-
-        <!-- Centro da Mesa -->
-        <div class="play player-center" id="player-center"></div>
-
-        <!-- Jogador 3 (canto direito) -->
-        <div class="player player-right">
-            <img class="avatar" src="{{ asset('images/avatar3.png') }}" alt="Avatar Jogador 3">
-            <div class="deck">
-                @foreach ($players[2] as $card)
-                    <img class="card-back">
-                @endforeach
-            </div>
-        </div>
-
-        <!-- Jogador Principal (parte inferior) -->
-        <div class="player player-bottom">
-            <img class="avatar" src="{{ asset('images/avatar4.png') }}" alt="Avatar Jogador Principal">
-            <div class="hand">
-                @foreach ($players[3] as $card)
-                    <img class="card-front player-card" onclick="selecionarCarta()" src="{{ $card['image'] }}" alt="{{ $card['value'] }} de {{ $card['suit'] }}">
-                @endforeach
-            </div>
-        </div>
+        @foreach ($room->players as $player)
+            @if ($player->id == auth()->user()->id) <!-- Mão do jogador principal -->
+                <div class="player">
+                    <h2>{{ $player->username }}</h2>
+                    <div class="hand">
+                        <div class="player player-bottom">
+                            <img class="avatar" src="{{ asset('images/avatar4.png') }}" alt="Avatar Jogador Principal">
+                            <div class="hand">
+                                @foreach ($player->hand as $card)
+                                    <img class="card-front player-card" onclick="selecionarCarta('{{ $card['value'] }}')" src="{{ $card['image'] }}">
+                                @endforeach
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @endif
+        @endforeach
     </div>
 
-    <form action="{{ route('determineWinner') }}" method="POST">
-        @csrf
-        <button type="submit" class="button">Determinar Vencedor</button>
-    </form>
-
-
-
+    <script src="https://js.pusher.com/7.0.3/pusher.min.js"></script>
     <script>
-       function selecionarCarta(event) {
-        // Obtém a carta que foi clicada
-        const cartaSelecionada = event.target;
+        // Conectar ao Pusher
+        Pusher.logToConsole = true;
+        var pusher = new Pusher('{{ env('PUSHER_APP_KEY') }}', {
+            cluster: '{{ env('PUSHER_APP_CLUSTER') }}',
+            encrypted: true
+        });
 
-        // Remove a carta da mão do jogador
-        cartaSelecionada.parentElement.removeChild(cartaSelecionada);
+        var channel = pusher.subscribe('game.{{ $room->room_id }}');
+        channel.bind('game.action', function(data) {
+            console.log('Ação do jogador recebida: ', data);
 
-        // Adiciona a carta na área central
-        const playerCenter = document.getElementById('player-center');
-        playerCenter.appendChild(cartaSelecionada);
-    }
+            // Atualiza a UI com base na ação
+            if (data.action === 'card_selected') {
+                alert('Jogador ' + data.playerId + ' escolheu uma carta!');
+                // Aqui você pode atualizar a UI (ex: removendo a carta da mão)
+            }
+        });
 
-    // Adiciona o evento de clique em cada carta da mão do jogador
-    document.querySelectorAll('.player-card').forEach(card => {
-        card.addEventListener('click', selecionarCarta);
-    });
+        // Função de seleção de carta
+        function selecionarCarta(cardValue) {
+            // Envia um evento para o backend via AJAX
+            fetch('/game/{{ $room->room_id }}/selecionarCarta', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                },
+                body: JSON.stringify({ card_value: cardValue })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log(data);
+            });
+        }
     </script>
 @endsection
-
-

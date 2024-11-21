@@ -20,4 +20,11 @@
 @else
     <p>Aguardando mais jogadores...</p>
 @endif
+<script>
+    Echo.channel('game-room.{{ $room->room_id }}')
+        .listen('GameStarted', (event) => {
+            // Redireciona para a mesa
+            window.location.href = "{{ route('game.play', $room->room_id) }}";
+        });
+</script>
 @endsection

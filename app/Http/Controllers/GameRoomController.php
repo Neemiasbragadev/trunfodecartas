@@ -7,6 +7,8 @@ use App\Models\GameRoom;
 use App\Models\GamePlayer;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
+use App\Events\GameAction;
+use App\Events\GameStarted;
 
 class GameRoomController extends Controller
 {
@@ -85,59 +87,6 @@ class GameRoomController extends Controller
 
 
     // Inicia o jogo após todos os jogadores se conectarem
-    // public function start($roomId)
-    // {
-
-    //     $room = GameRoom::where('room_id', $roomId)->with('players')->first();
-
-    //     if ($room->players->count() < 4) {
-    //         return back()->with('error', 'Aguardando mais jogadores.');
-    //     }
-
-
-    //     $response = Http::get('https://deckofcardsapi.com/api/deck/new/shuffle/?deck_count=1');
-    //     $data = $response->json();
-    //     dd($data);
-    //     // Gera o baralho completo
-    //     // $suits = ['Copas', 'Espadas', 'Ouros', 'Paus'];
-    //     // $values = ['Ás', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'Valete', 'Dama', 'Rei'];
-    //     // $deck = [];
-
-    //     foreach ($suits as $suit) {
-    //         foreach ($values as $value) {
-    //             $deck[] = ['value' => $value, 'suit' => $suit];
-    //         }
-    //     }
-
-    //     shuffle($deck); // Embaralha o baralho
-
-
-    //    // Configura o trunfo caso ainda não esteja configurado
-    //     if (is_null($room->trump)) {
-    //     $trump = $deck[array_rand($deck)]; // Escolhe o trunfo de forma aleatória
-    //     $room->update(['trump' => $trump]); // Salva automaticamente como JSON por conta do cast
-    //     }
-
-    //     // Distribui as cartas para os jogadores
-    //     $players = $room->players;
-    //      $hands = [[], [], [], []];
-
-
-
-    //      for ($i = 0; $i < count($deck); $i++) {
-    //         $hands[$i % 4][] = $deck[$i];
-    //     }
-
-
-    //     foreach ($players as $index => $player) {
-    //     $player->update(['hand' => $hands[$index]]);
-    //     }
-
-
-
-    //    // Redireciona para a mesa
-    //    return redirect()->route('game.play', $roomId);
-    // }
 
 
     public function start($roomId)
@@ -186,6 +135,7 @@ class GameRoomController extends Controller
     }
 
     // Redireciona para a tela do jogo
+    event(new GameStarted($room));
     return redirect()->route('game.play', $roomId);
 }
 
@@ -202,5 +152,19 @@ class GameRoomController extends Controller
 
 
         return view('cardgame.players', compact('room'));
+    }
+
+
+    public function selecionarCarta(Request $request, $roomId)
+    {
+        // Ação do jogador - exemplo: escolha de uma carta
+        $playerId = auth()->user()->id;
+        $action = 'card_selected';  // Ou o tipo de ação que você está transmitindo
+
+        // Dispara o evento
+        broadcast(new GameAction($roomId, $action, $playerId));
+
+        // Retorna uma resposta, como atualizar a interface do jogo
+        return response()->json(['status' => 'success']);
     }
 }
