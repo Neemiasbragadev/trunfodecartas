@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use App\Events\GameAction;
 use App\Events\GameStarted;
+use App\Events\PlayerJoined;
 
 class GameRoomController extends Controller
 {
@@ -79,6 +80,9 @@ class GameRoomController extends Controller
             'game_room_id'=> $room->id,
         ]);
         Auth::login($player);
+
+        $players = $room->players()->get();
+        broadcast(new PlayerJoined($validated['room_id'], $players));
 
 
         return redirect()->route('game.view', $validated['room_id']);

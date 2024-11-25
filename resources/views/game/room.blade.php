@@ -5,7 +5,14 @@
 @section('content')
 <h1>Sala: {{ $room->room_id }}</h1>
 
+<div id="players-container">
+    @foreach ($room->players as $player)
+        <div>{{ $player->username }}</div>
+    @endforeach
+</div>
+
 <h2>Jogadores Conectados:</h2>
+
 <ul>
     @foreach ($room->players as $player)
         <li>{{ $player->username }} @if($player->is_host) (Host) @endif</li>
@@ -21,10 +28,27 @@
     <p>Aguardando mais jogadores...</p>
 @endif
 <script>
-    Echo.channel('game-room.{{ $room->room_id }}')
-        .listen('GameStarted', (event) => {
-            // Redireciona para a mesa
-            window.location.href = "{{ route('game.play', $room->room_id) }}";
+    const roomId = "{{ $room->room_id }}";
+
+    window.Echo.channel(`game-room.${roomId}`)
+        .listen('player-joined', (e) => {
+            console.log('Player joined:', e.players);
+
+            // Atualize os jogadores na sala dinamicamente
+            const playersContainer = document.getElementById('players-container');
+            playersContainer.innerHTML = '';
+
+            e.players.forEach(player => {
+                const playerElement = document.createElement('div');
+                playerElement.textContent = player.username;
+                playersContainer.appendChild(playerElement);
+            });
+
+            // Redirecionar se todos os 4 jogadores estiverem conectados
+            if (e.players.length === 4) {
+                window.location.href = "{{ route('game.play', $room->room_id) }}";
+            }
         });
 </script>
+
 @endsection
