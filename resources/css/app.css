@@ -1,0 +1,54 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Estilos customizados para cartas */
+.card {
+    @apply bg-white rounded-lg shadow-lg border transition-all duration-300 cursor-pointer;
+    aspect-ratio: 2.5/3.5;
+}
+
+.card:hover {
+    @apply transform -translate-y-2 shadow-xl;
+}
+
+.card.playable:hover {
+    @apply ring-4 ring-blue-400;
+}
+
+.card-back {
+    @apply bg-gradient-to-br from-blue-600 to-blue-800;
+    background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="20" fill="none" stroke="white" stroke-width="2" opacity="0.3"/></svg>');
+}
+
+/* Estilos para mesa de jogo */
+.game-table {
+    @apply bg-gradient-to-br from-green-700 to-green-900 rounded-full shadow-inner;
+}
+
+/* Animações de cartas */
+.card-enter {
+    animation: cardSlide 0.3s ease-out;
+}
+
+.card-flip {
+    animation: cardFlip 0.6s ease-in-out;
+}
+
+/* Indicador de turno */
+.turn-indicator {
+    @apply animate-pulse ring-4 ring-yellow-400;
+}
+
+/* Chat styles */
+.chat-message {
+    @apply max-w-xs lg:max-w-md px-4 py-2 rounded-lg;
+}
+
+.chat-message.own {
+    @apply bg-blue-500 text-white ml-auto;
+}
+
+.chat-message.other {
+    @apply bg-gray-200 text-gray-800;
+}

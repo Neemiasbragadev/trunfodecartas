@@ -26,16 +26,17 @@ class GameRoomController extends Controller
         $room = GameRoom::create([       // Adiciona o jogador anfitrião
             'room_id' => $roomId,
             'host' => $validated['username'],
+            'game_status' => GameRoom::STATUS_WAITING,
         ]);
+        
         $player = GamePlayer::create([
             'username' => $validated['username'],
             'is_host' => true,
             'game_room_id' => $room->id,
-
+            'position' => 1,
         ]);
+        
         Auth::login($player);
-
-       //dd(Auth::user());
 
         return redirect()->route('game.view', $roomId);
     }
@@ -48,8 +49,7 @@ class GameRoomController extends Controller
              return redirect()->route('game.create')->with('error', 'Sala não encontrada.');
          }
 
-         if ($room->players->count() === 4) {
-
+         if ($room->isFull()) {
              return redirect()->route('game.start', $roomId); // Redireciona para iniciar o jogo
          }
 
@@ -60,30 +60,30 @@ class GameRoomController extends Controller
     // Jogador entra em uma sala existente
     public function join(Request $request)
     {
-
-
         $validated = $request->validate([
             'username' => 'required|string|max:255',
             'room_id' => 'required|string|exists:game_rooms,room_id',
         ]);
 
-
         $room = GameRoom::where('room_id', $validated['room_id'])->first();
 
-        if ($room->players()->count() >= 4) {
+        if ($room->isFull()) {
             return back()->with('error', 'A sala está cheia.');
         }
+
+        $position = $room->players()->count() + 1; // Define a posição do jogador
 
         $player = GamePlayer::create([
             'username' => $validated['username'],
             'is_host' => false,
             'game_room_id'=> $room->id,
+            'position' => $position,
         ]);
+        
         Auth::login($player);
 
         $players = $room->players()->get();
         broadcast(new PlayerJoined($validated['room_id'], $players));
-
 
         return redirect()->route('game.view', $validated['room_id']);
     }
@@ -98,8 +98,8 @@ class GameRoomController extends Controller
     // Carrega a sala com os jogadores
     $room = GameRoom::where('room_id', $roomId)->with('players')->first();
 
-    if ($room->players->count() < 4) {
-        return back()->with('error', 'Aguardando mais jogadores.');
+    if (!$room->canStart()) {
+        return back()->with('error', 'Aguardando mais jogadores ou jogo já iniciado.');
     }
 
     // Solicita um baralho embaralhado da API
@@ -124,10 +124,15 @@ class GameRoomController extends Controller
 
     // Configura o trunfo (primeira carta do baralho, por exemplo)
     $trumpCard = array_shift($deck); // Remove e define a primeira carta como trunfo
-    $room->update(['trump' => $trumpCard]); // Salva como JSON automaticamente
+    $room->update([
+        'trump' => $trumpCard,
+        'game_status' => GameRoom::STATUS_PLAYING,
+        'current_turn' => 1,
+        'round' => 1
+    ]);
 
     // Distribui as cartas entre os jogadores
-    $players = $room->players;
+    $players = $room->players()->orderBy('position')->get();
     $hands = [[], [], [], []];
 
     foreach ($deck as $index => $card) {
@@ -170,5 +175,117 @@ class GameRoomController extends Controller
 
         // Retorna uma resposta, como atualizar a interface do jogo
         return response()->json(['status' => 'success']);
+    }
+
+    public function playCard(Request $request, $roomId)
+    {
+        $validated = $request->validate([
+            'card_code' => 'required|string',
+        ]);
+
+        $room = GameRoom::where('room_id', $roomId)->with('players')->first();
+        $currentPlayer = auth()->user();
+
+        if (!$currentPlayer || !$currentPlayer->isCurrentTurn()) {
+            return response()->json(['error' => 'Não é seu turno'], 403);
+        }
+
+        // Verificar se o jogador tem a carta
+        $playerHand = $currentPlayer->hand ?? [];
+        $cardExists = false;
+        $playedCard = null;
+
+        foreach ($playerHand as $card) {
+            if ($card['code'] === $validated['card_code']) {
+                $cardExists = true;
+                $playedCard = $card;
+                break;
+            }
+        }
+
+        if (!$cardExists) {
+            return response()->json(['error' => 'Carta não encontrada na sua mão'], 400);
+        }
+
+        // Remover carta da mão do jogador
+        $currentPlayer->removeCard($validated['card_code']);
+
+        // Registrar a jogada
+        $currentMovesCount = \App\Models\GameMove::where('game_room_id', $room->id)
+            ->where('round', $room->round)
+            ->count();
+
+        \App\Models\GameMove::create([
+            'game_room_id' => $room->id,
+            'player_id' => $currentPlayer->id,
+            'card' => $playedCard,
+            'round' => $room->round,
+            'order' => $currentMovesCount + 1,
+        ]);
+
+        // Próximo turno
+        $room->nextTurn();
+
+        // Verificar se a rodada terminou (4 cartas jogadas)
+        if ($currentMovesCount + 1 === 4) {
+            $this->evaluateRound($room);
+        }
+
+        // Broadcast da jogada
+        broadcast(new GameAction($roomId, 'card_played', $currentPlayer->id));
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Carta jogada com sucesso',
+            'next_turn' => $room->current_turn
+        ]);
+    }
+
+    private function evaluateRound($room)
+    {
+        $moves = \App\Models\GameMove::where('game_room_id', $room->id)
+            ->where('round', $room->round)
+            ->with('player')
+            ->get();
+
+        $trumpSuit = $room->trump['suit'];
+        $winningMove = null;
+        $highestValue = 0;
+
+        foreach ($moves as $move) {
+            $card = $move->card;
+            $cardValue = $this->getCardValue($card['value']);
+            
+            // Cartas de trunfo têm prioridade
+            if ($card['suit'] === $trumpSuit) {
+                $cardValue += 100; // Bonus para trunfo
+            }
+
+            if ($cardValue > $highestValue) {
+                $highestValue = $cardValue;
+                $winningMove = $move;
+            }
+        }
+
+        if ($winningMove) {
+            $winningMove->update(['is_winner' => true]);
+            $winningMove->player->increment('score');
+            
+            // Definir o vencedor como primeiro jogador da próxima rodada
+            $room->update([
+                'current_turn' => $winningMove->player->position,
+                'round' => $room->round + 1
+            ]);
+        }
+    }
+
+    private function getCardValue($value)
+    {
+        $values = [
+            '2' => 2, '3' => 3, '4' => 4, '5' => 5, '6' => 6, '7' => 7, '8' => 8,
+            '9' => 9, '10' => 10, 'JACK' => 11, 'QUEEN' => 12, 'KING' => 13, 'ACE' => 14
+        ];
+
+        return $values[$value] ?? 0;
     }
 }

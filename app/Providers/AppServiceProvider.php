@@ -19,6 +19,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // Suprimir warnings deprecados em produção
+        if (app()->environment('production')) {
+            error_reporting(E_ALL & ~E_DEPRECATED & ~E_USER_DEPRECATED);
+        }
     }
 }
