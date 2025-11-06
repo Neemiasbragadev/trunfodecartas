@@ -22,4 +22,9 @@ class GameStarted implements ShouldBroadcast
     {
         return new Channel('game-room.' . $this->room->room_id);
     }
+
+    public function broadcastAs()
+    {
+        return 'GameStarted';
+    }
 }

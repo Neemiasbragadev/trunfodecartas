@@ -37,3 +37,4 @@ Route::get('/game/{roomId}', [GameRoomController::class, 'view'])->name('game.vi
 Route::get('/game/{roomId}/start', [GameRoomController::class, 'start'])->name('game.start'); // Iniciar jogo
 Route::get('/game/{roomId}/play', [GameRoomController::class, 'play'])->name('game.play'); // Exibir mesa
 Route::post('/game/{roomId}/play-card', [GameRoomController::class, 'playCard'])->name('game.play-card'); // Jogar carta
+Route::get('/game/{roomId}/check-game-status', [GameRoomController::class, 'checkGameStatus'])->name('game.check-status'); // Status da sala

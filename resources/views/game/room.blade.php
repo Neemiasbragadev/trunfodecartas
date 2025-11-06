@@ -68,10 +68,13 @@
                             Todos os Jogadores Conectados!
                         </h2>
                         <p class="text-gray-300 mb-4">
-                            O jogo começará automaticamente...
+                            Aguardando o anfitrião iniciar a partida.
                         </p>
-                        <div class="animate-spin text-blue-400 text-2xl">
-                            <i class="fas fa-spinner"></i>
+                        <div class="mt-2">
+                            <a href="{{ route('game.start', $room->room_id) }}" class="inline-flex items-center px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                                <i class="fas fa-play mr-2"></i>
+                                Iniciar Jogo
+                            </a>
                         </div>
                     </div>
                 @endif
@@ -159,23 +162,50 @@ function copyRoomId() {
 const roomId = "{{ $room->room_id }}";
 if (window.Echo) {
     window.Echo.channel(`game-room.${roomId}`)
-        .listen('player-joined', (e) => {
-            console.log('Player joined:', e.players);
-            location.reload(); // Recarrega para mostrar novos jogadores
+        .listen('.player-joined', (e) => {
+            try {
+                const count = Array.isArray(e.players) ? e.players.length : 0;
+                console.log('player-joined recebido. jogadores:', count);
+                if (count < 4) {
+                    // Atualiza quando ainda não completou 4/4
+                    location.reload();
+                } else {
+                    // Quando preencher 4/4, não force reload para evitar loop; aguarda início
+                    console.log('Sala cheia. Aguardando início.');
+                }
+            } catch (err) {
+                console.error('Erro ao processar player-joined:', err);
+            }
+        })
+        .listen('GameStarted', () => {
+            // Redireciona todos para a tela de jogo quando o servidor iniciar
+            window.location.href = '{{ route("game.play", $room->room_id) }}';
         });
 }
 
-// Auto-refresh como fallback
-setInterval(function() {
-    if ({{ $room->players->count() }} < 4) {
-        location.reload();
-    }
-}, 5000);
-
-// Redirect automático quando sala estiver cheia
-@if($room->players->count() === 4)
-    setTimeout(function() {
-        window.location.href = '{{ route("game.start", $room->room_id) }}';
+// Fallback: polling para o status do jogo (caso o WebSocket falhe)
+(function() {
+    let serverCount = {{ $room->players->count() }};
+    const checkUrl = '{{ url("/game/" . $room->room_id . "/check-game-status") }}';
+    setInterval(async () => {
+        try {
+            const res = await fetch(checkUrl, { headers: { 'Accept': 'application/json' } });
+            if (!res.ok) return;
+            const data = await res.json();
+            if (data.game_started) {
+                window.location.href = '{{ route("game.play", $room->room_id) }}';
+                return;
+            }
+            if (typeof data.player_count === 'number' && data.player_count !== serverCount) {
+                serverCount = data.player_count;
+                if (serverCount < 4) {
+                    // Só recarrega enquanto ainda estiver aguardando jogadores
+                    location.reload();
+                }
+            }
+        } catch (e) {
+            console.warn('Falha ao checar status do jogo:', e);
+        }
     }, 2000);
-@endif
+})();
 @endsection

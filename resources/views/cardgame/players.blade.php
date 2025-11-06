@@ -57,8 +57,26 @@
                 <div id="table-cards" class="absolute inset-0 flex items-center justify-center">
                     <div class="grid grid-cols-2 gap-4">
                         @for($i = 0; $i < 4; $i++)
-                            <div id="table-card-{{ $i }}" class="w-16 h-22 border-2 border-dashed border-white/30 rounded-lg flex items-center justify-center">
-                                <i class="fas fa-plus text-white/30 text-xl"></i>
+                            @php
+                                $move = isset($moves[$i]) ? $moves[$i] : null;
+                            @endphp
+                            <div id="table-card-{{ $i }}" class="w-16 h-22 border-2 rounded-lg flex items-center justify-center {{ $move ? 'border-white/60 bg-white' : 'border-dashed border-white/30' }}">
+                                @if($move && isset($move->card['value']) && isset($move->card['suit']))
+                                    <div class="text-center">
+                                        <div class="text-sm font-bold {{ in_array($move->card['suit'], ['HEARTS','DIAMONDS']) ? 'text-red-600' : 'text-black' }}">
+                                            {{ $move->card['value'] }}
+                                        </div>
+                                        <div class="text-lg">
+                                            @if($move->card['suit'] === 'HEARTS') ♥
+                                            @elseif($move->card['suit'] === 'DIAMONDS') ♦
+                                            @elseif($move->card['suit'] === 'CLUBS') ♣
+                                            @else ♠
+                                            @endif
+                                        </div>
+                                    </div>
+                                @else
+                                    <i class="fas fa-plus text-white/30 text-xl"></i>
+                                @endif
                             </div>
                         @endfor
                     </div>
@@ -159,35 +177,36 @@
 
 @section('scripts')
 // Função para jogar carta
-function playCard(cardCode) {
-    if (!confirm('Tem certeza que deseja jogar esta carta?')) {
-        return;
-    }
-    
-    fetch(`{{ route('game.play-card', $room->room_id) }}`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-        },
-        body: JSON.stringify({
-            card_code: cardCode
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
+async function playCard(cardCode) {
+    if (!confirm('Tem certeza que deseja jogar esta carta?')) return;
+    try {
+        const res = await fetch(`{{ route('game.play-card', $room->room_id) }}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: JSON.stringify({ card_code: cardCode })
+        });
+        const contentType = res.headers.get('content-type') || '';
+        if (!contentType.includes('application/json')) {
+            const text = await res.text();
+            console.error('Resposta não JSON:', text);
+            showToast('Falha ao jogar carta (resposta inválida).', 'error');
+            return;
+        }
+        const data = await res.json();
+        if (res.ok && data.success) {
             showToast('Carta jogada!', 'success');
-            // Atualizar interface
             location.reload();
         } else {
-            showToast(data.error || 'Erro ao jogar carta', 'error');
+            showToast((data && (data.error || data.message)) || 'Erro ao jogar carta', 'error');
         }
-    })
-    .catch(error => {
-        console.error('Erro:', error);
+    } catch (err) {
+        console.error('Erro na requisição:', err);
         showToast('Erro de conexão', 'error');
-    });
+    }
 }
 
 // Função para enviar mensagem
@@ -225,7 +244,7 @@ document.getElementById('chat-input').addEventListener('keypress', function(e) {
 // WebSocket para atualizações em tempo real
 if (window.Echo) {
     window.Echo.channel('game.{{ $room->room_id }}')
-        .listen('GameAction', (e) => {
+        .listen('.game.action', (e) => {
             console.log('Game action received:', e);
             if (e.action === 'card_played') {
                 location.reload(); // Recarregar para mostrar nova carta

@@ -44,16 +44,10 @@ class GameRoomController extends Controller
      public function view($roomId)
      {
          $room = GameRoom::where('room_id', $roomId)->with('players')->first();
-        // $room = $this->room;
          if (!$room) {
              return redirect()->route('game.create')->with('error', 'Sala não encontrada.');
          }
-
-         if ($room->isFull()) {
-             return redirect()->route('game.start', $roomId); // Redireciona para iniciar o jogo
-         }
-
-
+         // Mantém o usuário na sala; o início do jogo será disparado pelo anfitrião e comunicado por evento
          return view('game.room', compact('room'));
      }
 
@@ -143,10 +137,25 @@ class GameRoomController extends Controller
         $player->update(['hand' => $hands[$index]]); // Atualiza a mão de cada jogador no banco
     }
 
-    // Redireciona para a tela do jogo
+    // Dispara evento para todos os clientes e redireciona quem chamou
     event(new GameStarted($room));
     return redirect()->route('game.play', $roomId);
 }
+
+    /**
+     * Endpoint leve para clientes consultarem o status da sala.
+     */
+    public function checkGameStatus($roomId)
+    {
+        $room = GameRoom::where('room_id', $roomId)->withCount('players')->first();
+        if (!$room) {
+            return response()->json(['error' => 'Sala não encontrada'], 404);
+        }
+        return response()->json([
+            'game_started' => $room->game_status === GameRoom::STATUS_PLAYING,
+            'player_count' => $room->players_count,
+        ]);
+    }
 
 
     // Exibe a mesa de jogo
@@ -159,8 +168,13 @@ class GameRoomController extends Controller
             return redirect()->route('game.create')->with('error', 'Sala não encontrada.');
         }
 
+        // Carrega as cartas jogadas na rodada atual para exibir na mesa
+        $moves = \App\Models\GameMove::where('game_room_id', $room->id)
+            ->where('round', $room->round)
+            ->orderBy('order')
+            ->get();
 
-        return view('cardgame.players', compact('room'));
+        return view('cardgame.players', compact('room', 'moves'));
     }
 
 
